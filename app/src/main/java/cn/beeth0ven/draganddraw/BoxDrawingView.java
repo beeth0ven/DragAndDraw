@@ -26,7 +26,9 @@ public class BoxDrawingView extends View {
     private Paint boxPaint;
     private Paint backgroundPaint;
     private Integer pointId1, pointId2;
-    private float angle = 0;
+    private Line line1 = new Line();
+    private Line line2 = new Line();
+    private float currentAngel = 0;
 
     public BoxDrawingView(Context context) {
         this(context, null);
@@ -49,21 +51,31 @@ public class BoxDrawingView extends View {
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 action = "ACTION_DOWN";
+                line1.startX = event.getX();
+                line1.startY = event.getY();
                 pointId1 = event.getPointerId(event.getActionIndex());
                 currentBox = new Box(current);
                 boxes.add(currentBox);
                 break;
             case MotionEvent.ACTION_POINTER_DOWN:
+                line1.endX = getX();
+                line1.endY = getY();
                 action = "ACTION_POINTER_DOWN";
                 pointId2 = event.getPointerId(event.getActionIndex());
                 break;
             case MotionEvent.ACTION_MOVE:
                 action = "ACTION_MOVE";
+                Log.i("BoxDrawingView", "pointId1: " + pointId1 +  " pointId2: " + pointId2);
                 if (pointId1 != null && pointId2 != null) {
-                    angle += getRotateAngleFromTouchEvent(event);
-                }
-
-                if (currentBox != null) {
+                    line2.startX = event.getX(event.findPointerIndex(pointId1));
+                    line2.startY = event.getY(event.findPointerIndex(pointId1));
+                    line2.endX = event.getX(event.findPointerIndex(pointId2));
+                    line2.endY = event.getY(event.findPointerIndex(pointId2));
+                    currentAngel += getRotateAngleFromTouchEvent(line1, line2);
+                    line1 = line2;
+                    invalidate();
+                    Log.i("BoxDrawingView", "currentAngel: " + currentAngel);
+                } else if (currentBox != null) {
                     currentBox.current = current;
                     invalidate();
                 }
@@ -71,31 +83,38 @@ public class BoxDrawingView extends View {
             case MotionEvent.ACTION_UP:
                 action = "ACTION_UP";
                 pointId1 = null;
+                line1 = new Line();
                 currentBox = null;
                 break;
             case MotionEvent.ACTION_POINTER_UP:
                 action = "ACTION_POINTER_UP";
                 pointId2 = null;
+                line2 = new Line();
                 break;
             case MotionEvent.ACTION_CANCEL:
                 action = "ACTION_CANCEL";
                 currentBox = null;
                 pointId1 = null;
                 pointId2 = null;
+                line1 = new Line();
+                line2 = new Line();
                 break;
         }
         Log.i("BoxDrawingView", action + " at x=" + current.x + ", y=" + current.y);
         return true;
     }
 
-    private float getRotateAngleFromTouchEvent(MotionEvent event) {
-
+    private float getRotateAngleFromTouchEvent(Line startLine, Line endLine) {
+        float angle = ((float) Math.toDegrees(endLine.getAngle() - startLine.getAngle())) * 360 ;
+        if (angle < -180.f) { angle += 360.f; }
+        if (angle > 180.f) { angle -= 360.f; }
+        return angle;
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
 
-        canvas.rotate((float) 45, getWidth() / 2, getHeight() / 2);
+        canvas.rotate(currentAngel, getWidth() / 2, getHeight() / 2);
 
         canvas.drawPaint(backgroundPaint);
 
